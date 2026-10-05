@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>겜허브 | 설치 없이 바로 하는 보드게임</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7.0.0/bundles/stomp.umd.min.js"></script>
+</head>
+<body>
+<header class="topbar">
+    <a class="brand" href="/" id="brand">겜<span>허브</span></a>
+    <div class="topbar-right">
+        <span id="me-box"></span>
+        <div class="auth-box" id="auth-box"></div>
+    </div>
+</header>
+
+<main id="app">
+    <!-- 로비 -->
+    <section id="lobby" class="view">
+        <div class="hero">
+            <h1>친구와 바로 한 판</h1>
+            <p id="hero-text">설치 없이 바로 시작해요. 로그인하면 내 닉네임을 지킬 수 있어요.</p>
+            <label class="nickname" id="nickname-box">
+                <span id="nickname-label">닉네임</span>
+                <input id="nickname" maxlength="12" placeholder="1~12자" autocomplete="off">
+            </label>
+        </div>
+
+        <h2 class="section-title">게임 고르기</h2>
+        <div class="game-cards" id="game-cards"></div>
+
+        <div class="lobby-grid">
+            <div class="panel">
+                <h2 class="section-title">코드로 입장</h2>
+                <form id="join-form" class="join-form">
+                    <input id="join-code" maxlength="6" placeholder="6자리 코드" autocomplete="off">
+                    <button class="btn primary" type="submit">입장</button>
+                </form>
+            </div>
+            <div class="panel">
+                <div class="panel-head">
+                    <h2 class="section-title">열린 방</h2>
+                    <button class="btn ghost small" id="refresh-rooms" type="button">새로고침</button>
+                </div>
+                <ul class="room-list" id="room-list"></ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 로그인 -->
+    <section id="login" class="view hidden">
+        <form class="auth-card" id="login-form" novalidate>
+            <h1>로그인</h1>
+            <p class="auth-sub">다시 오셨네요! 아이디와 비밀번호를 입력해 주세요.</p>
+            <label class="field">
+                <span>아이디</span>
+                <input id="login-username" name="username" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false">
+            </label>
+            <label class="field">
+                <span>비밀번호</span>
+                <input id="login-password" name="password" type="password" maxlength="72" autocomplete="current-password">
+            </label>
+            <p class="form-error" id="login-error" role="alert"></p>
+            <button class="btn primary block" id="login-submit" type="submit">로그인</button>
+            <p class="auth-switch">아직 회원이 아니신가요? <a href="#signup" data-go="signup">회원가입</a></p>
+            <button class="link-btn" type="button" data-go="lobby">로그인 없이 둘러보기</button>
+        </form>
+    </section>
+
+    <!-- 회원가입 -->
+    <section id="signup" class="view hidden">
+        <form class="auth-card" id="signup-form" novalidate>
+            <h1>회원가입</h1>
+            <p class="auth-sub">가입하면 닉네임을 나만 쓸 수 있어요.</p>
+            <label class="field">
+                <span>아이디</span>
+                <input id="signup-username" name="username" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false">
+                <small class="hint" data-for="username">영문 소문자·숫자 4~20자</small>
+            </label>
+            <label class="field">
+                <span>닉네임</span>
+                <input id="signup-nickname" name="nickname" maxlength="12" autocomplete="nickname">
+                <small class="hint" data-for="nickname">게임에서 보이는 이름 · 1~12자</small>
+            </label>
+            <label class="field">
+                <span>비밀번호</span>
+                <input id="signup-password" name="password" type="password" minlength="8" maxlength="72" autocomplete="new-password">
+                <small class="hint" data-for="password">8~72자로 입력해 주세요</small>
+            </label>
+            <label class="field">
+                <span>비밀번호 확인</span>
+                <input id="signup-password2" name="password2" type="password" minlength="8" maxlength="72" autocomplete="new-password">
+                <small class="hint" data-for="password2">한 번 더 입력해 주세요</small>
+            </label>
+            <p class="form-error" id="signup-error" role="alert"></p>
+            <button class="btn primary block" id="signup-submit" type="submit">가입하고 시작하기</button>
+            <p class="auth-switch">이미 회원이신가요? <a href="#login" data-go="login">로그인</a></p>
+            <button class="link-btn" type="button" data-go="lobby">로그인 없이 둘러보기</button>
+        </form>
+    </section>
+
+    <!-- 혼자하기 준비 -->
+    <section id="solo" class="view hidden">
+        <h1 class="solo-title">혼자 한 판 준비해요.</h1>
+        <div class="solo-game">
+            <div class="icon big" id="solo-icon"></div>
+            <div class="solo-game-text">
+                <h2 id="solo-name"></h2>
+                <p id="solo-sub">컴퓨터 대전</p>
+            </div>
+            <button class="btn ghost" id="solo-back" type="button">게임 변경</button>
+        </div>
+        <h3 class="solo-question">어떤 상대와 둘까요?</h3>
+        <div class="level-cards" id="level-cards" role="radiogroup" aria-label="컴퓨터 난이도"></div>
+        <p class="solo-rule">한 수에 60초 · 다섯 개 이상 이으면 승리 (자유 규칙)</p>
+        <button class="btn start-solo" id="solo-start" type="button"><span id="solo-start-label">시작</span><span aria-hidden="true">→</span></button>
+    </section>
+
+    <!-- 방 -->
+    <section id="room" class="view hidden">
+        <div class="room-head">
+            <div>
+                <p class="eyebrow" id="room-game"></p>
+                <h1 class="room-title"><span id="room-code-label">방 코드</span> <button class="code-chip" id="room-code" title="눌러서 초대 링크 복사"></button></h1>
+            </div>
+            <button class="btn ghost" id="leave-btn" type="button">나가기</button>
+        </div>
+
+        <div class="room-layout">
+            <aside class="panel players-panel">
+                <h2 class="section-title">참가자 <span id="player-count"></span></h2>
+                <ul class="players" id="players"></ul>
+            </aside>
+            <div class="panel stage" id="stage"></div>
+        </div>
+    </section>
+</main>
+
+<!-- 게임 선택 창 -->
+<div id="game-modal" class="modal-backdrop hidden">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <button class="modal-close" id="modal-close" type="button" aria-label="닫기">×</button>
+        <div class="modal-head">
+            <div class="icon big" id="modal-icon"></div>
+            <div>
+                <h2 id="modal-title"></h2>
+                <p id="modal-desc"></p>
+                <p class="muted small" id="modal-meta"></p>
+            </div>
+        </div>
+        <details class="modal-guide">
+            <summary>게임 안내 보기</summary>
+            <p id="modal-guide"></p>
+        </details>
+        <div class="modal-actions">
+            <button class="btn outline" id="modal-solo" type="button">혼자하기</button>
+            <button class="btn dark" id="modal-create" type="button">방만들기</button>
+        </div>
+        <h3 class="modal-rooms-title">열린 <span id="modal-room-name"></span> 방 <span class="count" id="modal-room-count">0</span></h3>
+        <ul class="room-list" id="modal-rooms"></ul>
+    </div>
+</div>
+
+<div id="toast" class="toast hidden" role="status"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
