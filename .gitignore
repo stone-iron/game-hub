@@ -13,3 +13,8 @@ target/
 
 ### 로컬 H2 데이터 ###
 data/
+
+### 로컬 비밀키 ###
+.env
+.env.*
+!.env.example

@@ -26,13 +26,13 @@ public class JpaMemberStore implements MemberStore {
     }
 
     @Override
-    public Optional<Member> findByUsername(String username) {
-        return repository.findByUsername(username).map(MemberEntity::toMember);
+    public Optional<Member> findByEmail(String email) {
+        return repository.findByEmail(email).map(MemberEntity::toMember);
     }
 
     @Override
-    public boolean existsByUsername(String username) {
-        return repository.existsByUsername(username);
+    public boolean existsByEmail(String email) {
+        return repository.existsByEmail(email);
     }
 
     @Override
@@ -46,7 +46,7 @@ public class JpaMemberStore implements MemberStore {
             return repository.saveAndFlush(MemberEntity.from(member)).toMember();
         } catch (DataIntegrityViolationException e) {
             // 중복 확인과 저장 사이에 다른 사람이 먼저 가입한 경우. DB 유니크 제약이 마지막으로 막아 준다.
-            throw new AuthException(AuthException.Reason.DUPLICATED, "이미 사용 중인 아이디 또는 닉네임입니다.");
+            throw new AuthException(AuthException.Reason.DUPLICATED, "이미 가입된 이메일 또는 사용 중인 닉네임입니다.");
         }
     }
 }

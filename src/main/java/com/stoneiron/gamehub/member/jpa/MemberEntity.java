@@ -12,13 +12,13 @@ import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
 
 /**
- * 회원 테이블. 아이디와 닉네임에 유니크 제약을 걸어,
+ * 회원 테이블. 이메일과 닉네임에 유니크 제약을 걸어,
  * 동시에 같은 값으로 가입하는 요청이 와도 DB가 한 건만 받아들인다.
  * (MySQL에서 member는 예약어라 테이블 이름을 members로 했다.)
  */
 @Entity
 @Table(name = "members", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_members_username", columnNames = "username"),
+        @UniqueConstraint(name = "uk_members_email", columnNames = "email"),
         @UniqueConstraint(name = "uk_members_nickname", columnNames = "nickname")
 })
 public class MemberEntity {
@@ -27,13 +27,13 @@ public class MemberEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 20)
-    private String username;
+    @Column(nullable = false, length = 254)
+    private String email;
 
     @Column(nullable = false, length = 12)
     private String nickname;
 
-    @Column(name = "password_hash", nullable = false, length = 200)
+    @Column(name = "password_hash", length = 200)
     private String passwordHash;
 
     @Column(name = "created_at", nullable = false)
@@ -45,7 +45,7 @@ public class MemberEntity {
     static MemberEntity from(Member member) {
         MemberEntity entity = new MemberEntity();
         entity.id = member.id();
-        entity.username = member.username();
+        entity.email = member.email();
         entity.nickname = member.nickname();
         entity.passwordHash = member.passwordHash();
         entity.createdAt = member.createdAt();
@@ -53,6 +53,6 @@ public class MemberEntity {
     }
 
     Member toMember() {
-        return new Member(id, username, nickname, passwordHash, createdAt);
+        return new Member(id, email, nickname, passwordHash, createdAt);
     }
 }

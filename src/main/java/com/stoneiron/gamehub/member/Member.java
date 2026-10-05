@@ -7,9 +7,9 @@ import java.time.Instant;
  *
  * @param id 저장 전에는 null
  */
-public record Member(Long id, String username, String nickname, String passwordHash, Instant createdAt) {
+public record Member(Long id, String email, String nickname, String passwordHash, Instant createdAt) {
 
     public MemberProfile profile() {
-        return new MemberProfile(id, username, nickname);
+        return new MemberProfile(id, email, nickname);
     }
 }

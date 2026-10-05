@@ -25,11 +25,13 @@ import java.util.regex.Pattern;
 public class AuthService {
 
     static final Duration SESSION_LENGTH = Duration.ofDays(7);
-    static final Pattern USERNAME = Pattern.compile("^[a-z0-9]{4,20}$");
+    static final Pattern EMAIL = Pattern.compile(
+            "^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$");
+    static final int EMAIL_MAX = 254;
     static final int NICKNAME_MAX = 12;
     static final int PASSWORD_MIN = 8;
     static final int PASSWORD_MAX = 72;
-    private static final String LOGIN_FAILED = "아이디 또는 비밀번호가 올바르지 않습니다.";
+    private static final String LOGIN_FAILED = "이메일 또는 비밀번호가 올바르지 않습니다.";
 
     private final MemberStore members;
     private final AuthSessionStore sessions;
@@ -37,7 +39,7 @@ public class AuthService {
     private final LoginAttemptGuard guard;
     private final Clock clock;
     private final SecureRandom random = new SecureRandom();
-    /** 없는 아이디로 로그인할 때도 비밀번호 검사 시간을 똑같이 쓰기 위한 가짜 해시 */
+    /** 가입되지 않은 이메일로 로그인할 때도 비밀번호 검사 시간을 똑같이 쓰기 위한 가짜 해시 */
     private final String dummyHash;
 
     public AuthService(MemberStore members, AuthSessionStore sessions, PasswordHasher hasher,
@@ -52,44 +54,44 @@ public class AuthService {
 
     // ---------------------------------------------------------------- 가입
 
-    public AuthResult signup(String rawUsername, String rawNickname, String password) {
-        String username = normalizeUsername(rawUsername);
+    public AuthResult signup(String rawEmail, String rawNickname, String password) {
+        String email = normalizeEmail(rawEmail);
         String nickname = rawNickname == null ? "" : rawNickname.strip();
-        validateUsername(username);
+        validateEmail(email);
         validateNickname(nickname);
         validatePassword(password);
 
-        if (members.existsByUsername(username)) {
-            throw new AuthException(Reason.DUPLICATED, "이미 사용 중인 아이디입니다.");
+        if (members.existsByEmail(email)) {
+            throw new AuthException(Reason.DUPLICATED, "이미 가입된 이메일입니다.");
         }
         if (members.existsByNickname(nickname)) {
             throw new AuthException(Reason.DUPLICATED, "이미 사용 중인 닉네임입니다.");
         }
-        Member saved = members.save(new Member(null, username, nickname, hasher.hash(password), clock.instant()));
+        Member saved = members.save(new Member(null, email, nickname, hasher.hash(password), clock.instant()));
         return issueSession(saved);
     }
 
     // ---------------------------------------------------------------- 로그인 · 로그아웃
 
-    public AuthResult login(String rawUsername, String password) {
-        String username = normalizeUsername(rawUsername);
+    public AuthResult login(String rawEmail, String password) {
+        String email = normalizeEmail(rawEmail);
         Instant now = clock.instant();
-        Duration locked = guard.remainingLock(username, now);
+        Duration locked = guard.remainingLock(email, now);
         if (locked != null) {
             long minutes = Math.max(1, (locked.toSeconds() + 59) / 60);
             throw new AuthException(Reason.TOO_MANY_ATTEMPTS,
                     "로그인에 여러 번 실패했어요. " + minutes + "분 뒤에 다시 시도해 주세요.");
         }
 
-        Optional<Member> member = members.findByUsername(username);
-        // 아이디가 없어도 같은 시간을 들여 비교해서, 응답 속도로 가입 여부를 알 수 없게 한다.
+        Optional<Member> member = members.findByEmail(email);
+        // 이메일이 없어도 같은 시간을 들여 비교해서, 응답 속도로 가입 여부를 알 수 없게 한다.
         boolean ok = hasher.matches(password == null ? "" : password, member.map(Member::passwordHash).orElse(dummyHash));
         if (member.isEmpty() || !ok) {
-            guard.recordFailure(username, now);
-            // 아이디가 없는지 비밀번호가 틀렸는지 알려주지 않는다.
+            guard.recordFailure(email, now);
+            // 이메일이 없는지 비밀번호가 틀렸는지 알려주지 않는다.
             throw new AuthException(Reason.UNAUTHORIZED, LOGIN_FAILED);
         }
-        guard.recordSuccess(username);
+        guard.recordSuccess(email);
         return issueSession(member.get());
     }
 
@@ -145,7 +147,7 @@ public class AuthService {
 
     // ---------------------------------------------------------------- 내부 도우미
 
-    private AuthResult issueSession(Member member) {
+    AuthResult issueSession(Member member) {
         byte[] bytes = new byte[32];
         random.nextBytes(bytes);
         String token = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
@@ -153,13 +155,13 @@ public class AuthService {
         return new AuthResult(token, member.profile());
     }
 
-    static String normalizeUsername(String username) {
-        return username == null ? "" : username.strip().toLowerCase();
+    static String normalizeEmail(String email) {
+        return email == null ? "" : email.strip().toLowerCase();
     }
 
-    private static void validateUsername(String username) {
-        if (!USERNAME.matcher(username).matches()) {
-            throw new AuthException(Reason.INVALID_INPUT, "아이디는 영문 소문자와 숫자로 4~20자여야 해요.");
+    static void validateEmail(String email) {
+        if (email.length() > EMAIL_MAX || !EMAIL.matcher(email).matches()) {
+            throw new AuthException(Reason.INVALID_INPUT, "올바른 이메일 주소를 입력해 주세요.");
         }
     }
 

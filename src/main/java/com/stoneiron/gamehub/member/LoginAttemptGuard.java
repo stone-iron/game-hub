@@ -6,7 +6,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 아이디별 로그인 실패를 세어, 연속으로 여러 번 틀리면 잠시 로그인을 막는다.
+ * 이메일별 로그인 실패를 세어, 연속으로 여러 번 틀리면 잠시 로그인을 막는다.
  * 비밀번호를 하나씩 대입해 보는 공격을 느리게 만든다.
  *
  * <p>서버 메모리에 기록하므로 서버를 다시 켜면 초기화된다.
@@ -26,16 +26,16 @@ public class LoginAttemptGuard {
     private final Map<String, Attempts> attempts = new ConcurrentHashMap<>();
 
     /** 잠겨 있으면 남은 시간을, 아니면 null을 돌려준다. */
-    public Duration remainingLock(String username, Instant now) {
-        Attempts a = attempts.get(key(username));
+    public Duration remainingLock(String email, Instant now) {
+        Attempts a = attempts.get(key(email));
         if (a == null || a.lockedUntil() == null || !now.isBefore(a.lockedUntil())) {
             return null;
         }
         return Duration.between(now, a.lockedUntil());
     }
 
-    public void recordFailure(String username, Instant now) {
-        attempts.compute(key(username), (k, a) -> {
+    public void recordFailure(String email, Instant now) {
+        attempts.compute(key(email), (k, a) -> {
             boolean fresh = a == null
                     || (a.lockedUntil() != null && !now.isBefore(a.lockedUntil()))
                     || !now.isBefore(a.lastFailureAt().plus(FORGET_AFTER));
@@ -45,8 +45,8 @@ public class LoginAttemptGuard {
         });
     }
 
-    public void recordSuccess(String username) {
-        attempts.remove(key(username));
+    public void recordSuccess(String email) {
+        attempts.remove(key(email));
     }
 
     /** 잠금이 풀렸고 오래된 기록을 지워 메모리가 계속 늘어나지 않게 한다. */
@@ -60,7 +60,7 @@ public class LoginAttemptGuard {
         return attempts.size();
     }
 
-    private static String key(String username) {
-        return username == null ? "" : username.toLowerCase();
+    private static String key(String email) {
+        return email == null ? "" : email.toLowerCase();
     }
 }

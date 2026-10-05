@@ -39,8 +39,11 @@
 
 ### 회원가입·로그인
 
-- 아이디와 닉네임 중복 방지
+- 이메일과 닉네임 중복 방지
 - 8~72자의 비밀번호 규칙 적용
+- Google·Kakao·Naver 소셜 로그인 지원
+- 동일한 이메일의 일반 계정과 소셜 계정을 하나의 회원으로 연결
+- OAuth 성공 결과를 2분짜리 일회용 코드로 교환해 로그인 토큰의 URL 노출 방지
 - PBKDF2(HMAC-SHA256, 21만 회 반복)와 회원별 솔트로 비밀번호 저장
 - 로그인 토큰 원문 대신 SHA-256 해시만 DB에 보관
 - 로그인 5회 연속 실패 시 5분간 잠금
@@ -115,7 +118,7 @@ GameRule                                  GameSession
 
 | 영역 | 기술 |
 |---|---|
-| Backend | Java 25, Spring Boot 4.1, Spring Web, Bean Validation |
+| Backend | Java 25, Spring Boot 4.1, Spring Web, Spring Security, OAuth2 Client, Bean Validation |
 | Realtime | Spring WebSocket, STOMP |
 | Database | Spring Data JPA, H2 File DB |
 | Frontend | HTML, CSS, Vanilla JavaScript, STOMP.js |
@@ -126,9 +129,9 @@ GameRule                                  GameSession
 
 게임 규칙뿐 아니라 동시성, 인증 보안, 재접속과 비공개 메시지까지 자동 테스트로 검증합니다.
 
-- 전체 테스트 **60개 통과**
+- 전체 테스트 **69개 통과**
 - 같은 정답에 대한 40개 동시 요청 검증
-- 같은 아이디에 대한 20개 동시 회원가입 검증
+- 같은 이메일에 대한 20개 동시 회원가입 검증
 - 오목 승패·시간 초과·AI 난이도 검증
 - 방 생성·입장·퇴장·재접속 검증
 - 출제자 전용 제시어와 토큰 비공개 검증
@@ -156,12 +159,39 @@ cd game-hub
 
 회원 데이터는 프로젝트의 `data/` 디렉터리에 H2 파일로 저장되며 Git에는 포함되지 않습니다.
 
+### 소셜 로그인 설정
+
+사용할 제공자의 키만 환경변수로 등록하면 해당 로그인 버튼이 자동으로 나타납니다. 키를 등록하지 않아도 이메일 회원가입과 로그인은 정상적으로 동작합니다.
+
+```bash
+export GOOGLE_CLIENT_ID="발급받은 Client ID"
+export GOOGLE_CLIENT_SECRET="발급받은 Client Secret"
+
+export KAKAO_CLIENT_ID="카카오 REST API 키"
+export KAKAO_CLIENT_SECRET="카카오 Client Secret을 사용하는 경우 입력"
+
+export NAVER_CLIENT_ID="발급받은 Client ID"
+export NAVER_CLIENT_SECRET="발급받은 Client Secret"
+```
+
+각 개발자 콘솔에는 아래 Callback URL을 등록합니다.
+
+```text
+Google: http://localhost:8090/login/oauth2/code/google
+Kakao:  http://localhost:8090/login/oauth2/code/kakao
+Naver:  http://localhost:8090/login/oauth2/code/naver
+```
+
+운영 환경에서는 `localhost:8090`을 실제 HTTPS 도메인으로 바꿔 등록합니다. 키와 시크릿은 `application.properties`나 Git에 직접 올리지 않습니다.
+
 ## 주요 통신 경로
 
 | 방식 | 경로 | 용도 |
 |---|---|---|
 | REST | `POST /api/auth/signup` | 회원가입 |
 | REST | `POST /api/auth/login` | 로그인 |
+| REST | `GET /api/auth/social/providers` | 설정된 소셜 로그인 제공자 조회 |
+| REST | `POST /api/auth/social/exchange` | OAuth 일회용 코드를 앱 로그인 토큰으로 교환 |
 | REST | `POST /api/rooms` | 게임방 생성 |
 | REST | `POST /api/rooms/solo` | 혼자하기 방 생성 |
 | REST | `POST /api/rooms/{code}/join` | 코드로 방 입장 |

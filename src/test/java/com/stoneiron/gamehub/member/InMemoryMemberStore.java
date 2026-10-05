@@ -7,7 +7,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
-/** 테스트용 메모리 회원 저장소. DB의 유니크 제약처럼 아이디·닉네임 중복 저장을 막는다. */
+/** 테스트용 메모리 회원 저장소. DB의 유니크 제약처럼 이메일·닉네임 중복 저장을 막는다. */
 class InMemoryMemberStore implements MemberStore {
 
     private final Map<Long, Member> byId = new ConcurrentHashMap<>();
@@ -19,13 +19,13 @@ class InMemoryMemberStore implements MemberStore {
     }
 
     @Override
-    public Optional<Member> findByUsername(String username) {
-        return byId.values().stream().filter(m -> m.username().equals(username)).findFirst();
+    public Optional<Member> findByEmail(String email) {
+        return byId.values().stream().filter(m -> m.email().equals(email)).findFirst();
     }
 
     @Override
-    public boolean existsByUsername(String username) {
-        return findByUsername(username).isPresent();
+    public boolean existsByEmail(String email) {
+        return findByEmail(email).isPresent();
     }
 
     @Override
@@ -35,10 +35,10 @@ class InMemoryMemberStore implements MemberStore {
 
     @Override
     public synchronized Member save(Member member) {
-        if (existsByUsername(member.username()) || existsByNickname(member.nickname())) {
-            throw new AuthException(Reason.DUPLICATED, "이미 사용 중인 아이디 또는 닉네임입니다.");
+        if (existsByEmail(member.email()) || existsByNickname(member.nickname())) {
+            throw new AuthException(Reason.DUPLICATED, "이미 가입된 이메일 또는 사용 중인 닉네임입니다.");
         }
-        Member saved = new Member(sequence.incrementAndGet(), member.username(), member.nickname(),
+        Member saved = new Member(sequence.incrementAndGet(), member.email(), member.nickname(),
                 member.passwordHash(), member.createdAt());
         byId.put(saved.id(), saved);
         return saved;

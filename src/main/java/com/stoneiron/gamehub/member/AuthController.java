@@ -2,6 +2,7 @@ package com.stoneiron.gamehub.member;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,24 +28,24 @@ public class AuthController {
         this.authService = authService;
     }
 
-    public record SignupRequest(@NotBlank @Size(max = 20) String username,
+    public record SignupRequest(@NotBlank @Email @Size(max = 254) String email,
                                 @NotBlank @Size(max = 12) String nickname,
                                 @NotBlank @Size(min = 8, max = 72) String password) {
     }
 
-    public record LoginRequest(@NotBlank @Size(max = 20) String username,
+    public record LoginRequest(@NotBlank @Email @Size(max = 254) String email,
                                @NotBlank @Size(max = 72) String password) {
     }
 
     @PostMapping("/signup")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResult signup(@Valid @RequestBody SignupRequest request) {
-        return authService.signup(request.username(), request.nickname(), request.password());
+        return authService.signup(request.email(), request.nickname(), request.password());
     }
 
     @PostMapping("/login")
     public AuthResult login(@Valid @RequestBody LoginRequest request) {
-        return authService.login(request.username(), request.password());
+        return authService.login(request.email(), request.password());
     }
 
     @PostMapping("/logout")

@@ -53,10 +53,10 @@
     <section id="login" class="view hidden">
         <form class="auth-card" id="login-form" novalidate>
             <h1>로그인</h1>
-            <p class="auth-sub">다시 오셨네요! 아이디와 비밀번호를 입력해 주세요.</p>
+            <p class="auth-sub">다시 오셨네요! 이메일과 비밀번호를 입력해 주세요.</p>
             <label class="field">
-                <span>아이디</span>
-                <input id="login-username" name="username" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false">
+                <span>이메일</span>
+                <input id="login-email" name="email" type="email" maxlength="254" autocomplete="email" autocapitalize="off" spellcheck="false">
             </label>
             <label class="field">
                 <span>비밀번호</span>
@@ -64,6 +64,10 @@
             </label>
             <p class="form-error" id="login-error" role="alert"></p>
             <button class="btn primary block" id="login-submit" type="submit">로그인</button>
+            <div class="social-area hidden" data-social-area>
+                <div class="auth-divider"><span>또는</span></div>
+                <div class="social-buttons" data-social-buttons></div>
+            </div>
             <p class="auth-switch">아직 회원이 아니신가요? <a href="#signup" data-go="signup">회원가입</a></p>
             <button class="link-btn" type="button" data-go="lobby">로그인 없이 둘러보기</button>
         </form>
@@ -75,9 +79,9 @@
             <h1>회원가입</h1>
             <p class="auth-sub">가입하면 닉네임을 나만 쓸 수 있어요.</p>
             <label class="field">
-                <span>아이디</span>
-                <input id="signup-username" name="username" maxlength="20" autocomplete="username" autocapitalize="off" spellcheck="false">
-                <small class="hint" data-for="username">영문 소문자·숫자 4~20자</small>
+                <span>이메일</span>
+                <input id="signup-email" name="email" type="email" maxlength="254" autocomplete="email" autocapitalize="off" spellcheck="false">
+                <small class="hint" data-for="email">로그인에 사용할 이메일 주소</small>
             </label>
             <label class="field">
                 <span>닉네임</span>
@@ -96,6 +100,10 @@
             </label>
             <p class="form-error" id="signup-error" role="alert"></p>
             <button class="btn primary block" id="signup-submit" type="submit">가입하고 시작하기</button>
+            <div class="social-area hidden" data-social-area>
+                <div class="auth-divider"><span>또는</span></div>
+                <div class="social-buttons" data-social-buttons></div>
+            </div>
             <p class="auth-switch">이미 회원이신가요? <a href="#login" data-go="login">로그인</a></p>
             <button class="link-btn" type="button" data-go="lobby">로그인 없이 둘러보기</button>
         </form>

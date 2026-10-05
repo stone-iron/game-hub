@@ -68,7 +68,7 @@
         stageKey: null,
         game: null,      // 현재 화면에 올라간 게임 렌더러
         roomsTimer: null,
-        auth: null,      // 로그인했으면 { token, member: { id, username, nickname } }
+        auth: null,      // 로그인했으면 { token, member: { id, email, nickname } }
     };
 
     // ------------------------------------------------------------ 저장소 (사생활 모드 등에서 실패해도 동작)
@@ -1156,7 +1156,7 @@
     }
 
     // ------------------------------------------------------------ 로그인 · 회원가입
-    const USERNAME_RE = /^[a-z0-9]{4,20}$/;
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
     function setAuth(auth) {
         state.auth = auth;
@@ -1203,7 +1203,7 @@
         $('#signup-error').textContent = '';
         resetHints();
         show(which);
-        $(which === 'login' ? '#login-username' : '#signup-username').focus();
+        $(which === 'login' ? '#login-email' : '#signup-email').focus();
     }
 
     function setBusy(button, busy, label) {
@@ -1213,18 +1213,18 @@
 
     async function submitLogin(ev) {
         ev.preventDefault();
-        const username = $('#login-username').value.trim().toLowerCase();
+        const email = $('#login-email').value.trim().toLowerCase();
         const password = $('#login-password').value;
         const error = $('#login-error');
-        if (!username || !password) {
-            error.textContent = '아이디와 비밀번호를 모두 입력해 주세요.';
-            (!username ? $('#login-username') : $('#login-password')).focus();
+        if (!email || !password) {
+            error.textContent = '이메일과 비밀번호를 모두 입력해 주세요.';
+            (!email ? $('#login-email') : $('#login-password')).focus();
             return;
         }
         const button = $('#login-submit');
         setBusy(button, true, '로그인 중…');
         try {
-            const result = await api('POST', '/api/auth/login', { username, password });
+            const result = await api('POST', '/api/auth/login', { email, password });
             setAuth(result);
             toast(`${result.member.nickname}님, 반가워요!`);
             showLobby();
@@ -1239,11 +1239,11 @@
 
     /** 회원가입 칸별 규칙. 통과하면 null, 아니면 안내 문구. 서버(AuthService)와 같은 규칙이다. */
     function signupProblem(name, values) {
-        const { username, nickname, password, password2 } = values;
+        const { email, nickname, password, password2 } = values;
         switch (name) {
-            case 'username':
-                if (!username) return '아이디를 입력해 주세요.';
-                return USERNAME_RE.test(username) ? null : '영문 소문자와 숫자로 4~20자여야 해요.';
+            case 'email':
+                if (!email) return '이메일을 입력해 주세요.';
+                return email.length <= 254 && EMAIL_RE.test(email) ? null : '올바른 이메일 주소를 입력해 주세요.';
             case 'nickname':
                 if (!nickname) return '닉네임을 입력해 주세요.';
                 return nickname.length <= 12 ? null : '닉네임은 12자까지 쓸 수 있어요.';
@@ -1259,7 +1259,7 @@
     }
 
     const HINTS = {
-        username: '영문 소문자·숫자 4~20자',
+        email: '로그인에 사용할 이메일 주소',
         nickname: '게임에서 보이는 이름 · 1~12자',
         password: '8~72자로 입력해 주세요',
         password2: '한 번 더 입력해 주세요',
@@ -1267,7 +1267,7 @@
 
     function signupValues() {
         return {
-            username: $('#signup-username').value.trim().toLowerCase(),
+            email: $('#signup-email').value.trim().toLowerCase(),
             nickname: $('#signup-nickname').value.trim(),
             password: $('#signup-password').value,
             password2: $('#signup-password2').value,
@@ -1309,13 +1309,13 @@
         setBusy(button, true, '가입하는 중…');
         try {
             const result = await api('POST', '/api/auth/signup',
-                { username: values.username, nickname: values.nickname, password: values.password });
+                { email: values.email, nickname: values.nickname, password: values.password });
             setAuth(result);
             toast(`가입을 환영해요, ${result.member.nickname}님!`);
             showLobby();
         } catch (e) {
             error.textContent = e.message;
-            if (e.message.includes('아이디')) $('#signup-username').focus();
+            if (e.message.includes('이메일')) $('#signup-email').focus();
             else if (e.message.includes('닉네임')) $('#signup-nickname').focus();
         } finally {
             setBusy(button, false, '가입하고 시작하기');
@@ -1348,6 +1348,46 @@
         }
     }
 
+    async function renderSocialProviders() {
+        try {
+            const providers = await api('GET', '/api/auth/social/providers');
+            for (const area of document.querySelectorAll('[data-social-area]')) {
+                const buttons = area.querySelector('[data-social-buttons]');
+                buttons.replaceChildren(...providers.map(provider =>
+                    el('a', {
+                        class: `social-btn ${provider.id}`,
+                        href: `/oauth2/authorization/${encodeURIComponent(provider.id)}`,
+                    }, el('span', { class: 'social-mark', text: provider.id === 'google' ? 'G' : provider.id === 'kakao' ? 'K' : 'N' }),
+                    `${provider.name}로 계속하기`)));
+                area.classList.toggle('hidden', providers.length === 0);
+            }
+        } catch {
+            // 일반 이메일 로그인은 소셜 제공자 조회 실패와 관계없이 사용할 수 있다.
+        }
+    }
+
+    async function finishSocialLogin() {
+        const params = new URLSearchParams(location.search);
+        const code = params.get('oauth_code');
+        const failure = params.get('oauth_error');
+        if (!code && !failure) return;
+        params.delete('oauth_code');
+        params.delete('oauth_error');
+        const query = params.toString();
+        history.replaceState(null, '', location.pathname + (query ? `?${query}` : '') + location.hash);
+        if (failure) {
+            toast(failure);
+            return;
+        }
+        try {
+            const result = await api('POST', '/api/auth/social/exchange', { code });
+            setAuth(result);
+            toast(`${result.member.nickname}님, 반가워요!`);
+        } catch (e) {
+            toast(e.message);
+        }
+    }
+
     function bindAuthForms() {
         $('#login-form').addEventListener('submit', submitLogin);
         $('#signup-form').addEventListener('submit', submitSignup);
@@ -1371,6 +1411,8 @@
     async function init() {
         $('#nickname').value = storage.get(NICK_KEY) || '';
         bindAuthForms();
+        await renderSocialProviders();
+        await finishSocialLogin();
         await restoreAuth();
         renderAuth();
         $('#join-form').addEventListener('submit', ev => {

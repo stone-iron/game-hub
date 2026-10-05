@@ -12,14 +12,14 @@ public interface MemberStore {
 
     Optional<Member> findById(Long id);
 
-    Optional<Member> findByUsername(String username);
+    Optional<Member> findByEmail(String email);
 
-    boolean existsByUsername(String username);
+    boolean existsByEmail(String email);
 
     boolean existsByNickname(String nickname);
 
     /**
-     * 새 회원을 저장한다. 동시에 같은 아이디·닉네임으로 가입하면 한 명만 성공하고
+     * 새 회원을 저장한다. 동시에 같은 이메일·닉네임으로 가입하면 한 명만 성공하고
      * 나머지는 {@link AuthException}(DUPLICATED)을 받는다.
      */
     Member save(Member member);
